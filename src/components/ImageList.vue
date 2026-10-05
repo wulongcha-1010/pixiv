@@ -1,0 +1,239 @@
+<template>
+  <div class="image-list-comp" :class="listClass">
+    <VirtualWaterfall
+      v-if="listType == 'VirtualMasonry' || listType == 'VirtualGrid'"
+      wrapper-height="95vh"
+      :gap="10"
+      :items="list"
+      :row-key="itemKey"
+      :min-column-count="2"
+      :item-min-width="280"
+      :preload-screen-count="preloadScreenCount"
+      :calc-item-height="vCalcItemHeight"
+      :on-load-more="onReachEnd"
+    >
+      <template #default="{ item }">
+        <ImageCard
+          mode="all"
+          :artwork="item"
+          :square="listType == 'VirtualGrid'"
+          v-bind="imageCardProps(item)"
+          @click-card="toArtwork(item)"
+        />
+      </template>
+      <template #tips>
+        <p v-show="loading" class="il-tips-text">{{ $t('tips.loading') }}</p>
+        <p v-if="!loading && finished" class="il-tips-text">{{ $t('tips.no_more') }}</p>
+        <p v-if="!loading && !finished && !listError" class="il-tips-text" style="cursor: pointer" @click="onReachEnd()">{{ $t('tips.load_more') }}</p>
+        <p v-if="!loading && listError" class="il-tips-text" style="cursor: pointer" @click="onReachEnd()">{{ $t('tips.net_err') }}</p>
+      </template>
+    </VirtualWaterfall>
+    <VirtualJustified
+      v-else-if="listType == 'VirtualJustified'"
+      wrapper-height="95vh"
+      :items="list"
+      :row-key="itemKey"
+      :preload-screen-count="preloadScreenCount"
+      :on-load-more="onReachEnd"
+    >
+      <template #default="{ item }">
+        <ImageCard
+          mode="all"
+          :artwork="item"
+          v-bind="imageCardProps(item)"
+          @click-card="toArtwork(item)"
+        />
+      </template>
+      <template #tips>
+        <p v-show="loading" class="il-tips-text">{{ $t('tips.loading') }}</p>
+        <p v-if="!loading && finished" class="il-tips-text">{{ $t('tips.no_more') }}</p>
+        <p v-if="!loading && !finished && !listError" class="il-tips-text" style="cursor: pointer" @click="onReachEnd()">{{ $t('tips.load_more') }}</p>
+        <p v-if="!loading && listError" class="il-tips-text" style="cursor: pointer" @click="onReachEnd()">{{ $t('tips.net_err') }}</p>
+      </template>
+    </VirtualJustified>
+    <VirtualSwiper
+      v-else-if="listType == 'VirtualSlide'"
+      height="84vh"
+      :slides="list"
+      :item-key="itemKey"
+      :on-reach-end="onReachEnd"
+    >
+      <template #default="{ slide }">
+        <ImageCard
+          mode="all"
+          force-large-webp
+          :artwork="slide"
+          v-bind="imageCardProps(slide)"
+          @click-card="toArtwork(slide)"
+        />
+      </template>
+    </VirtualSwiper>
+    <van-list
+      v-else
+      v-model="listLoading"
+      :loading-text="$t('tips.loading')"
+      :finished="finished"
+      :finished-text="$t('tips.no_more')"
+      :error.sync="listError"
+      :error-text="$t('tips.net_err')"
+      :offset="800"
+      :immediate-check="false"
+      v-bind="vanListProps"
+      @load="onReachEnd"
+    >
+      <JustifiedLayout v-if="listType == 'Justified(Transform)'" :items="list" :item-key="itemKey">
+        <template #default="{ item }">
+          <ImageCard
+            mode="all"
+            :artwork="item"
+            v-bind="imageCardProps(item)"
+            @click-card="toArtwork(item)"
+          />
+        </template>
+      </JustifiedLayout>
+      <MasonryGrid
+        v-else-if="listType == 'Masonry2'"
+        class="masonry-grid"
+        :items="list"
+        :item-key="itemKey"
+        :gap="{ default: 10 }"
+        :cols="masonryCols"
+      >
+        <template #default="{ item }">
+          <ImageCard
+            mode="all"
+            :artwork="item"
+            v-bind="imageCardProps(item)"
+            @click-card="toArtwork(item)"
+          />
+        </template>
+      </MasonryGrid>
+      <wf-cont v-else :layout="forceLayout">
+        <ImageCard
+          v-for="(item, index) in list"
+          :key="item[itemKey] || index"
+          mode="all"
+          :square="listType == 'Grid'"
+          :artwork="item"
+          v-bind="imageCardProps(item)"
+          @click-card="toArtwork(item)"
+        />
+      </wf-cont>
+    </van-list>
+  </div>
+</template>
+
+<script>
+import store from '@/store'
+import VirtualSwiper from '@/components/VirtualSwiper.vue'
+import VirtualWaterfall from '@/components/VirtualWaterfall.vue'
+import VirtualJustified from '@/components/VirtualJustified.vue'
+import JustifiedLayout from '@/components/JustifiedLayoutComp.vue'
+import MasonryGrid from '@/components/MasonryGrid.vue'
+import ImageCard from '@/components/ImageCard.vue'
+
+export default {
+  name: 'ImageList',
+  components: {
+    VirtualSwiper,
+    VirtualWaterfall,
+    VirtualJustified,
+    JustifiedLayout,
+    MasonryGrid,
+    ImageCard,
+  },
+  props: {
+    list: { type: Array, default: () => [] },
+    listClass: { type: String, default: '' },
+    itemKey: { type: String, default: 'id' },
+    forceLayout: { type: String, default: '' },
+    vanListProps: { type: Object, default: () => ({}) },
+    imageCardProps: { type: Function, default: () => ({}) },
+    vwtfNoTop: { type: Boolean, default: false },
+    loading: { type: Boolean, default: true },
+    finished: { type: Boolean, default: false },
+    error: { type: Boolean, default: false },
+    onLoadMore: { type: Function, default: () => {} },
+    onCardClick: { type: Function, default: () => {} },
+  },
+  data() {
+    return {
+      listLoading: true,
+      listError: true,
+    }
+  },
+  computed: {
+    listType() {
+      if (this.forceLayout) return this.forceLayout
+      const { wfType, isVirtualList } = store.state.appSetting
+      if (isVirtualList) {
+        if (wfType == 'Justified(Transform)') return 'VirtualJustified'
+        if (wfType == 'Masonry2' || wfType == 'Masonry(CSSGrid)') return 'VirtualMasonry'
+        if (['Masonry', 'Grid', 'Justified'].includes(wfType)) return `Virtual${wfType}`
+      }
+      return wfType
+    },
+    preloadScreenCount() {
+      return this.vwtfNoTop ? [2, 1] : [1, 1]
+    },
+    masonryCols() {
+      const { isImageFitScreen } = store.state.appSetting
+      return isImageFitScreen
+        ? { 300: 1, 600: 2, 900: 3, 1200: 4, 1600: 5, default: 6 }
+        : { 300: 1, 600: 2, 1200: 3, default: 4 }
+    },
+  },
+  watch: {
+    loading: {
+      immediate: true,
+      handler(val) {
+        if (val) this.listError = false
+        this.listLoading = val
+      },
+    },
+    error: {
+      immediate: true,
+      handler(val) {
+        this.listError = val
+      },
+    },
+  },
+  methods: {
+    onReachEnd() {
+      if (this.loading || this.finished) return
+      this.onLoadMore()
+    },
+    vCalcItemHeight(item, itemWidth) {
+      if (this.listType == 'VirtualGrid') return itemWidth
+      return item.height * (itemWidth / item.width)
+    },
+    toArtwork(artwork) {
+      this.onCardClick(artwork)
+      this.$store.dispatch('setGalleryList', this.list)
+      let art = artwork
+      let id = artwork.id
+      if (typeof id == 'string') {
+        id = parseInt(artwork.id)
+      }
+      if (artwork._art) {
+        art = artwork._art
+      }
+      this.$router.push({
+        name: 'Artwork',
+        params: { id, art },
+      })
+    },
+  },
+}
+</script>
+
+<style scoped>
+.il-tips-text {
+  padding-top: 10PX;
+  padding-bottom: 50PX;
+  color: #969799;
+  font-size: 14PX;
+  line-height: 50PX;
+  text-align: center;
+}
+</style>

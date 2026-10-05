@@ -1,0 +1,1107 @@
+<template>
+  <div class="artwork novel">
+    <TopBar />
+    <div v-if="!useNovelWebview" class="more_btn" @click="toggleNovelConfigShow">
+      <Icon class="icon" name="novel_setting" />
+    </div>
+    <div class="ia-cont" :class="{ isCollapseMeta, isSafari }">
+      <div class="ia-left">
+        <van-loading v-if="loading" size="50px" style="margin-top: 3rem;" />
+        <template v-else>
+          <NovelEmbedView v-if="useNovelWebview" :html="novelHtml" />
+          <NovelView v-else ref="novelView" :artwork="artwork" :text-obj="novelText" />
+          <div v-if="!useNovelWebview" class="collapse-btn" @click="isCollapseMeta=!isCollapseMeta">
+            <Icon class="icon" name="double_arrow_down" />
+          </div>
+        </template>
+      </div>
+      <div class="ia-right">
+        <van-skeleton class="skeleton" title avatar :row="5" avatar-size="42px" :loading="loading">
+          <NovelMeta is-novel :artwork="artwork" />
+        </van-skeleton>
+        <div v-if="!loading" class="series-btns">
+          <van-button v-if="novelText.prev" color="#7232dd" size="small" plain block @click="toNovel(novelText.prev.id)">
+            {{ $t('novel.series.prev') }} {{ novelText.prev.title }}
+          </van-button>
+          <van-button v-if="novelText.next" color="#7232dd" size="small" plain block @click="toNovel(novelText.next.id)">
+            {{ $t('novel.series.next') }} {{ novelText.next.title }}
+          </van-button>
+          <div class="series-btns-group">
+            <van-button
+              v-if="showBookmarkBtn"
+              v-longpress="showBookmarkDialog"
+              :loading="favLoading"
+              type="info"
+              size="small"
+              plain
+              @click="toggleBookmark"
+            >
+              ⭐{{ artwork.is_bookmarked ? $t('user.faved'): $t('user.fav') }}
+            </van-button>
+            <van-button type="info" size="small" plain @click="showComments = true">
+              💬{{ $t('user.view_comments') }}
+            </van-button>
+            <van-button type="info" size="small" plain @click="showShare = true">
+              🔗{{ $t('artwork.share.share') }}
+            </van-button>
+          </div>
+          <div class="series-btns-group">
+            <van-button v-if="isNovelDlFormatSet" type="info" size="small" plain @click="downloadNovel()">
+              ⬇️{{ $t('common.download') }}
+            </van-button>
+            <van-popover
+              v-else
+              v-model="showDlPopover"
+              :actions="novelDlOptions"
+              trigger="click"
+              placement="top"
+              @select="downloadNovel"
+            >
+              <template #reference>
+                <van-button type="info" size="small" plain style="width: 100%;">⬇️{{ $t('common.download') }}</van-button>
+              </template>
+            </van-popover>
+            <van-button
+              v-if="isNovelDlFormatSet && artwork.series && artwork.series.id"
+              type="info"
+              size="small"
+              plain
+              @click="downloadNovel({ val: 'epub_series' })"
+            >
+              ⬇️{{ $t('novel.series.epub_btn') }}
+            </van-button>
+            <template v-if="showPntBtn">
+              <van-button v-if="isTranslated" type="info" size="small" plain @click="showOriginText">↩️显示原文</van-button>
+              <van-button
+                v-else-if="isNovelDefTranslateSet"
+                type="info"
+                size="small"
+                plain
+                :loading="translateLoading"
+                @click="doDefPnt"
+              >
+                🌐翻译
+              </van-button>
+              <van-popover
+                v-else
+                v-model="showPntPopover"
+                :actions="translateLoading ? [] : pntActions"
+                trigger="click"
+                placement="top"
+                @select="onPntSelect"
+              >
+                <template #reference>
+                  <van-button type="info" size="small" plain :loading="translateLoading" style="width: 100%;">🌐翻译</van-button>
+                </template>
+              </van-popover>
+            </template>
+          </div>
+          <div class="series-btns-group">
+            <van-button v-if="!useNovelWebview" type="info" size="small" plain @click="toggleNovelConfigShow">⚙{{ $t('novel.settings.title') }}</van-button>
+            <van-button v-if="showPntBtn" type="info" size="small" plain @click="showNovelTransSettings = true">⚙翻译设置</van-button>
+          </div>
+        </div>
+        <keep-alive>
+          <AuthorNovelCard v-if="artwork.author" :id="artwork.author.id" :key="artwork.id" />
+        </keep-alive>
+      </div>
+    </div>
+    <van-divider style="margin: 0.7rem 0;" />
+    <keep-alive>
+      <RelatedNovel :key="artwork.id" :artwork="artwork" />
+    </keep-alive>
+    <van-share-sheet v-model="showShare" :title="$t('artwork.share.title')" :cancel-text="$t('common.cancel')" :options="shareOptions" @select="onShareSel" />
+    <NovelTextConfig ref="novelConfigRef" />
+    <van-popup
+      v-model="showNovelTransSettings"
+      position="bottom"
+      class="translate-settings-popup"
+      round
+      closeable
+      close-icon-position="top-right"
+      get-container="body"
+    >
+      <NovelTranslateSettings />
+    </van-popup>
+    <van-popup
+      v-model="showComments"
+      class="comments-popup"
+      position="right"
+      get-container="body"
+      closeable
+    >
+      <template v-if="showComments">
+        <p class="comments-title">{{ $t('hGqGftQ7v772prEac1hbJ') }}</p>
+        <CommentsArea :id="artwork.id" is-novel :count="0" :limit="10" />
+      </template>
+    </van-popup>
+    <van-dialog
+      v-model="seriesDl.show"
+      :title="seriesDl.title"
+      :show-confirm-button="false"
+      :close-on-click-overlay="false"
+      class="series-dl-dialog"
+      get-container="body"
+    >
+      <div class="series-dl-body">
+        <van-progress
+          :percentage="seriesDl.total ? Math.floor((seriesDl.current / seriesDl.total) * 100) : 0"
+          color="#7232dd"
+        />
+        <p class="series-dl-status">
+          {{ seriesDl.current }} / {{ seriesDl.total }}
+          {{ seriesDl.phase === 'build' ? $t('novel.series.dl_generating') : seriesDl.failed ? $t('novel.series.dl_failed_prefix') + seriesDl.errorMsg : $t('novel.series.dl_downloading_status') }}
+        </p>
+        <div ref="seriesDlList" class="series-dl-list">
+          <div
+            v-for="(it, i) in seriesDl.items"
+            :key="it.id"
+            class="series-dl-item"
+            :class="it.status"
+          >
+            <span class="idx">{{ i + 1 }}.</span>
+            <span class="tt">{{ it.title }}</span>
+            <span class="st">{{ seriesDlStatusText(it.status) }}</span>
+          </div>
+        </div>
+        <div class="series-dl-actions">
+          <van-button v-if="seriesDl.failed" type="danger" size="small" @click="retrySeriesDownload">
+            {{ $t('common.retry') }}
+          </van-button>
+          <van-button size="small" @click="cancelSeriesDownload">{{ $t('common.cancel') }}</van-button>
+        </div>
+      </div>
+    </van-dialog>
+  </div>
+</template>
+
+<script>
+import _ from '@/lib/lodash'
+import { mapGetters } from 'vuex'
+import { Dialog, ImagePreview } from '@/lib/vant-apis'
+import api, { getBookmarkRestrictTags, localApi } from '@/api'
+import store, { novelTextConfig } from '@/store'
+import { getArtworkFileName } from '@/store/actions/filename'
+import { PIXIV_NEXT_URL } from '@/consts'
+import { getNoTranslateWords, isNativeTranslatorSupported, loadKISSTranslator, nativeTranslate, siliconCloudTranslate } from '@/utils/translate'
+import { copyText, downloadFile } from '@/utils'
+import { convertHtmlToDoc, convertHtmlToEpub, convertHtmlToPdf, convertNovelToMarkdown, printNovel, buildMetaHeaderTxt, buildMetaHeaderHtml, runSeriesEpubDownload, escapeHtml } from '@/utils/novel'
+import { getCache, setCache, toggleBookmarkCache } from '@/utils/storage/siteCache'
+import { i18n } from '@/i18n'
+import TopBar from '@/components/TopBar'
+import NovelView from './components/NovelView.vue'
+import NovelEmbedView from './components/NovelEmbedView.vue'
+import NovelTextConfig from './components/NovelTextConfig.vue'
+import NovelTranslateSettings from './components/NovelTranslateSettings.vue'
+import Meta from './components/Meta'
+import AuthorNovelCard from './components/AuthorNovelCard.vue'
+import RelatedNovel from './components/RelatedNovel.vue'
+import CommentsArea from './components/Comment/CommentsArea.vue'
+import IconLink from '@/assets/images/share-sheet-link.png'
+import IconQQ from '@/assets/images/share-sheet-qq.png'
+import IconQrcode from '@/assets/images/share-sheet-qrcode.png'
+import IconQzone from '@/assets/images/share-sheet-qzone.png'
+import IconWeb from '@/assets/images/share-sheet-web.png'
+// import IconWechat from '@/assets/images/share-sheet-wechat.png'
+import IconWeibo from '@/assets/images/share-sheet-weibo.png'
+import IconTwitter from '@/assets/images/share-sheet-twi.png'
+import IconFacebook from '@/assets/images/share-sheet-facebook.png'
+
+let novelTextBak = ''
+const {
+  isDefBookmarkPrivate,
+  isDefBookmarkAddTags,
+  isLongpressPrivateBookmark,
+  isDefFollowPrivate,
+  isAutoFollowAfterBookmark,
+  isAutoDownLoadAfterBookmark,
+  isAutoBookmarkAfterDownload,
+} = store.state.appSetting
+
+export default {
+  name: 'NovelDetail',
+  components: {
+    TopBar,
+    NovelMeta: Meta,
+    AuthorNovelCard,
+    NovelView,
+    NovelEmbedView,
+    RelatedNovel,
+    CommentsArea,
+    NovelTextConfig,
+    NovelTranslateSettings,
+  },
+  beforeRouteUpdate(_to, _from, next) {
+    this.recordScrollPosition()
+    next()
+  },
+  beforeRouteLeave(_to, _from, next) {
+    this.recordScrollPosition()
+    next()
+  },
+  data() {
+    return {
+      loading: false,
+      artwork: {},
+      novelText: {},
+      novelHtml: '',
+      showShare: false,
+      shareOptions: [
+        { name: i18n.t('artwork.share.type.web'), icon: IconWeb },
+        { name: i18n.t('artwork.share.type.copylink'), icon: IconLink },
+        { name: i18n.t('artwork.share.type.qrcode'), icon: IconQrcode },
+        { name: i18n.t('artwork.share.type.weibo'), icon: IconWeibo },
+        { name: i18n.t('artwork.share.type.qzone'), icon: IconQzone },
+        { name: 'QQ', icon: IconQQ },
+        // { name: i18n.t('artwork.share.type.wechat'), icon: IconWechat },
+        { name: 'Twitter', icon: IconTwitter },
+        { name: 'Facebook', icon: IconFacebook },
+      ],
+      isCollapseMeta: false,
+      showComments: false,
+      showPntPopover: false,
+      kissLoaded: !!document.querySelector('#kiss-translator'),
+      showNovelTransSettings: false,
+      showDlPopover: false,
+      seriesDl: {
+        show: false,
+        title: this.$t('novel.series.dl_title'),
+        total: 0,
+        current: 0,
+        items: [],
+        phase: 'fetch',
+        failed: false,
+        errorMsg: '',
+        cancel: false,
+        seriesId: null,
+        seriesTitle: '',
+        _resolvePause: null,
+      },
+      showBookmarkBtn: localApi.APP_CONFIG.useLocalAppApi,
+      favLoading: false,
+      translateLoading: false,
+      isTranslated: false,
+    }
+  },
+  head() {
+    return this.artwork.title
+      ? {
+          title: this.artwork.title + ' - ' + this.artwork.author?.name,
+        }
+      : {}
+  },
+  computed: {
+    ...mapGetters(['isCensored']),
+    pntActions() {
+      const modelName = store.state.translateConfig.novelModel?.split('/').pop() || 'N/A'
+      return [
+        !this.kissLoaded && ({ text: '加载 KISS Translator', className: 'imt', key: 'kiss_t' }),
+        isNativeTranslatorSupported && ({ text: 'Chrome 内置翻译', className: 'sc', key: 'native' }),
+        { text: `AI 翻译(${modelName})`, className: 'sc', key: 'sc_ai' },
+        { text: '微软翻译', className: 'ms', key: 'ms' },
+        { text: '谷歌翻译', className: 'gg', key: 'gg' },
+        { text: '有道翻译', className: 'yd', key: 'yd' },
+      ].filter(Boolean)
+    },
+    showPntBtn() {
+      if (store.state.appSetting.isAutoLoadKissT || store.state.appSetting.useNovelWebview) {
+        return false
+      }
+      return (
+        i18n.locale.includes('zh') &&
+        !/中文|中国语|Chinese|中國語|中国語/.test(JSON.stringify(this.artwork.tags))
+      )
+    },
+    isNovelDefTranslateSet() {
+      return Boolean(store.state.appSetting.novelDefTranslate)
+    },
+    isNovelDlFormatSet() {
+      return Boolean(store.state.appSetting.novelDefDlFormat && !store.state.appSetting.useNovelWebview)
+    },
+    novelDlOptions() {
+      return [
+        { text: 'TXT', val: 'txt' },
+        { text: 'HTML', val: 'html' },
+        { text: 'MD', val: 'md' },
+        { text: 'DOC', val: 'doc' },
+        !store.state.appSetting.useNovelWebview && { text: 'PDF', val: 'pdf' },
+        !store.state.isMobile && ({ text: `PDF(${i18n.t('Uf25j8CV8zHmOiUk7dn-M')})`, val: 'print' }),
+        !store.state.appSetting.useNovelWebview && { text: 'EPUB', val: 'epub' },
+        this.artwork.series && this.artwork.series.id && { text: i18n.t('novel.series.epub_btn'), val: 'epub_series' },
+      ].filter(Boolean)
+    },
+    useNovelWebview() {
+      return store.state.appSetting.useNovelWebview
+    },
+    isSafari() {
+      return store.state.isSafari
+    },
+  },
+  watch: {
+    $route() {
+      if (
+        this.$route.name === 'NovelDetail' &&
+        this.$route.params.id != this.artwork.id
+      ) {
+        this.init()
+      }
+    },
+    showComments(val) {
+      document.documentElement.style.overflowY = val ? 'hidden' : ''
+    },
+  },
+  mounted() {
+    this.init()
+  },
+  methods: {
+    recordScrollPosition() {
+      if (this.useNovelWebview) return
+      const position = novelTextConfig.direction == 'h' ? document.documentElement.scrollTop : this.$refs.novelView?.$refs?.view?.scrollLeft
+      console.log('recordScrollPosition: ', position)
+      setCache(`novel.scroll.${this.artwork.id}`, position)
+    },
+    init() {
+      this.loading = true
+      const id = +this.$route.params.id
+      this.artwork = {}
+      this.novelText = {}
+      this.novelHtml = ''
+      Promise.all([
+        this.getArtwork(id),
+        this.getNovelText(id),
+      ]).finally(() => {
+        this.loading = false
+      })
+    },
+    async getNovelText(id) {
+      if (this.useNovelWebview) {
+        const res = await api.getNovelHtml(id)
+        if (!res) return
+        this.novelHtml = res
+        const json = JSON.parse(res.match(/novel:\s({.+}),/)?.[1])
+        console.log('json: ', json)
+        this.novelText = {
+          text: json.text,
+          prev: json.seriesNavigation?.prevNovel,
+          next: json.seriesNavigation?.nextNovel,
+          embedImgs: json.images,
+        }
+        novelTextBak = json.text
+      } else {
+        const res = await api.getNovelText(id)
+        if (res.status === 0) {
+          this.novelText = res.data
+          novelTextBak = res.data.text
+        } else {
+          this.$toast({
+            message: res.msg,
+            icon: require('@/icons/error.svg'),
+            duration: 3000,
+          })
+        }
+      }
+    },
+    async getArtwork(id) {
+      const res = await api.getNovelDetail(id)
+      if (res.status === 0) {
+        this.artwork = res.data
+
+        if (this.isCensored(this.artwork)) {
+          this.$toast({
+            message: this.$t('common.content.hide'),
+            icon: require('@/icons/ban-view.svg'),
+          })
+        }
+
+        let historyList = await getCache('novels.history', [])
+        if (!Array.isArray(historyList)) historyList = []
+        // if (historyList.length > 100) historyList = historyList.slice(0, 100)
+        historyList = _.uniqBy([res.data, ...historyList], 'id')
+        setCache('novels.history', historyList)
+      } else {
+        this.$toast({
+          message: res.msg,
+          icon: require('@/icons/error.svg'),
+          duration: 3000,
+        })
+      }
+    },
+    toggleBookmark() {
+      this.favLoading = true
+      if (this.artwork.is_bookmarked) {
+        localApi.novelBookmarkDelete(this.artwork.id).then(isOk => {
+          this.favLoading = false
+          if (isOk) {
+            this.artwork.is_bookmarked = false
+            toggleBookmarkCache(this.artwork, false, true)
+          } else {
+            this.$toast(this.$t('artwork.unfav_fail'))
+          }
+        })
+      } else {
+        localApi.novelBookmarkAdd(
+          this.artwork.id,
+          isDefBookmarkPrivate ? 'private' : void 0,
+          isDefBookmarkAddTags ? this.artwork.tags.map(e => e.name) : void 0
+        ).then(isOk => {
+          this.favLoading = false
+          if (isOk) {
+            this.artwork.is_bookmarked = true
+            toggleBookmarkCache(this.artwork, true, true)
+            this.autoAddFollow()
+            if (isAutoDownLoadAfterBookmark) this.downloadNovel()
+          } else {
+            this.$toast(this.$t('artwork.fav_fail'))
+          }
+        })
+      }
+    },
+    async autoAddFollow() {
+      if (!isAutoFollowAfterBookmark || this.artwork.author.is_followed) return
+      const isFollowedCacheKey = `member_is_followed_${this.artwork.author.id}`
+      if (await getCache(isFollowedCacheKey)) return
+      this.favLoading = true
+      const isOk = await localApi.userFollowAdd(this.artwork.author.id, isDefFollowPrivate ? 'private' : 'public')
+      this.favLoading = false
+      if (!isOk) {
+        this.$toast(this.$t('user.follow_fail'))
+        return
+      }
+      this.artwork.author.is_followed = true
+      await setCache(isFollowedCacheKey, true)
+      const itemKey = `memberInfo_${this.artwork.author.id}`
+      const user = await getCache(itemKey)
+      if (user) {
+        user.is_followed = true
+        await setCache(itemKey, user, 60 * 60 * 6)
+      }
+    },
+    async showBookmarkDialog(/** @type {Event} */ ev) {
+      ev.preventDefault()
+      if (this.artwork.is_bookmarked) return
+      const action = async (restrict, tags) => {
+        this.favLoading = true
+        const isOk = await localApi.novelBookmarkAdd(this.artwork.id, restrict, tags)
+        this.favLoading = false
+        if (isOk) {
+          this.artwork.is_bookmarked = true
+          toggleBookmarkCache(this.artwork, true, true)
+          this.autoAddFollow()
+          if (isAutoDownLoadAfterBookmark) this.downloadNovel()
+          if (restrict == 'private') this.$toast(this.$t('kL2NNZsLQT9TUgeEmMQk3'))
+        } else {
+          this.$toast(this.$t('artwork.fav_fail'))
+        }
+      }
+      if (isLongpressPrivateBookmark) {
+        await action('private', isDefBookmarkAddTags ? this.artwork.tags.map(e => e.name) : void 0)
+        return
+      }
+      const { restrict, tags } = await getBookmarkRestrictTags(this.artwork.tags)
+      console.log('restrict: ', restrict)
+      console.log('tags: ', tags)
+      await action(restrict, tags)
+    },
+    onShareSel(_, index) {
+      const actions = [
+        async () => {
+          const shareData = {
+            title: 'Pixiv Viewer',
+            text: `${this.$t('artwork.share.share')} ${this.$t('artwork.share.of_art', [this.artwork.author.name])} ${this.artwork.title} - ID: ${this.artwork.id}`,
+            url: `${location.href}`,
+          }
+          try {
+            await navigator.share(shareData)
+          } catch (error) {
+            console.log('error: ', error)
+          }
+        },
+        () => {
+          copyText(
+            location.href,
+            () => this.$toast(this.$t('tips.copylink.success')),
+            err => this.$toast(this.$t('tips.copylink.error') + err)
+          )
+        },
+        () => {
+          ImagePreview({
+            closeable: true,
+            images: [`https://api.moedog.org/qr/?url=${encodeURIComponent(location.href)}`],
+          })
+        },
+        () => {
+          this.openUrl(`https://service.weibo.com/share/share.php?language=zh_cn&searchPic=true&url=${encodeURIComponent(location.href)}&title=${encodeURIComponent(`${this.$t('artwork.share.share')} ${this.$t('artwork.share.of_art', [this.artwork.author.name])} ${this.artwork.title} - PID: ${this.artwork.id}`)}&summary=PID%3A${this.artwork.id}&pic=${this.artwork.images[0].l}`)
+        },
+        () => {
+          this.openUrl(`https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?title=${this.artwork.title}&url=${encodeURIComponent(location.href)}&pics=${this.artwork.images[0].l}&summary=${encodeURIComponent(this.artwork.author.name + ' - PID: ' + this.artwork.id)}`)
+        },
+        () => {
+          this.openUrl(`https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(location.href)}&title=${this.artwork.title}&source=${encodeURIComponent(location.href)}&desc=${encodeURIComponent(`${this.$t('artwork.share.share')} ${this.$t('artwork.share.of_art', [this.artwork.author.name])} ${this.artwork.title} - PID: ${this.artwork.id}`)}&summary=${encodeURIComponent(`${this.$t('artwork.share.share')} ${this.$t('artwork.share.of_art', [this.artwork.author.name])} ${this.artwork.title} - PID: ${this.artwork.id}`)}`)
+        },
+        // () => {
+        //   this.openUrl(`https://wechat-share.pwp.space/?url=${encodeURIComponent(location.href)}&title=${this.artwork.title}`)
+        // },
+        () => {
+          this.openUrl(`https://twitter.com/intent/tweet?url=${encodeURIComponent(`https://www.pixiv.net/novel/show.php?id=${this.artwork.id}`)}&text=${this.artwork.title}&hashtags=pixiv`)
+        },
+        () => {
+          this.openUrl(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://www.pixiv.net/novel/show.php?id=${this.artwork.id}`)}`)
+        },
+      ]
+      actions[index]?.()
+    },
+    openUrl(url) {
+      window.open(url, '_blank', 'noopener noreferrer')
+    },
+    toNovel(id) {
+      this.$router.push(`/novel/${id}`)
+    },
+    toggleNovelConfigShow() {
+      this.$refs.novelConfigRef?.toggle()
+    },
+    async downloadNovel(format) {
+      const ext = format?.val || store.state.appSetting.novelDefDlFormat
+      window.umami?.track('download_novel', { ext })
+      const fileName = `${getArtworkFileName(this.artwork)}`
+      const getOuterHTML = () => {
+        if (this.useNovelWebview) {
+          return document.querySelector('.novel-embed-view iframe')?.contentWindow?.document?.querySelector('#text')?.innerHTML
+        }
+        const el = document.querySelector('.novel-view').cloneNode(true)
+        el.querySelector('svg').remove()
+        el.style.padding = '1rem'
+        const coverBox = el.querySelector('.image-box')
+        coverBox.setAttribute('style', 'padding: 1em 0;text-align:center')
+        coverBox.insertAdjacentHTML('afterbegin', `<h1 style="font-size:1.2em;font-weight:bold;text-align:center">${this.artwork.title}</h1><p style="color:gray;text-align:center">${this.artwork.author.name}</p>`)
+        coverBox.insertAdjacentHTML('beforeend', '<hr style="margin: 1em 0;color:gray"><br>')
+        return el.outerHTML
+      }
+      const actions = {
+        txt: async () => new Blob([buildMetaHeaderTxt(this.artwork) + novelTextBak], { type: 'text/plain;charset=utf-8' }),
+        html: async () => new Blob(['<meta charset="utf-8">' + buildMetaHeaderHtml(this.artwork) + getOuterHTML()], { type: 'text/html;charset=utf-8' }),
+        epub: async () => {
+          const el = document.querySelector('.novel_text').cloneNode(true)
+          const style = store.state.appSetting.novelDlRmStyle ? '' : el.getAttribute('style')
+          const res = await convertHtmlToEpub(el.innerHTML, style, this.artwork)
+          return res
+        },
+        print: async () => {
+          printNovel(buildMetaHeaderHtml(this.artwork) + getOuterHTML(), fileName)
+        },
+        pdf: async () => {
+          const el = document.querySelector('.novel_text').cloneNode(true)
+          const headerHtml = buildMetaHeaderHtml(this.artwork)
+          el.innerHTML = headerHtml + el.innerHTML
+          el.innerHTML = el.innerHTML.split('<br>').map(e => `<p${e ? '' : ' style="padding: 1em 0"'}>${e}</p>`).join('')
+          el.querySelectorAll('img').forEach(img => {
+            img.setAttribute('crossorigin', 'anonymous')
+          })
+          el.insertAdjacentHTML('afterbegin', `<h1 style="font-size:1.2em;font-weight:bold;text-align:center">${this.artwork.title}</h1><p style="color:gray;text-align:center">${this.artwork.author.name}</p><hr style="margin: 1em 0;color:gray"><br>`)
+          const res = await convertHtmlToPdf(el, fileName)
+          return res
+        },
+        doc: async () => convertHtmlToDoc(buildMetaHeaderHtml(this.artwork) + getOuterHTML()),
+        md: async () => convertNovelToMarkdown(this.novelText, this.artwork),
+        epub_series: async () => {
+          await this.downloadSeriesEpub(this.artwork.series.id, this.artwork.series.title)
+          return null
+        },
+      }
+      const blob = await actions[ext]()
+      if (blob) await downloadFile(blob, `${fileName}.${ext}`, { subDir: 'novel' })
+      if (localApi.APP_CONFIG.useLocalAppApi && !this.artwork.is_bookmarked && isAutoBookmarkAfterDownload) {
+        this.favLoading = true
+        localApi.novelBookmarkAdd(
+          this.artwork.id,
+          isDefBookmarkPrivate ? 'private' : void 0,
+          isDefBookmarkAddTags ? this.artwork.tags.map(e => e.name) : void 0
+        )
+          .then(isOk => {
+            this.favLoading = false
+            if (isOk) {
+              this.artwork.is_bookmarked = true
+              toggleBookmarkCache(this.artwork, true, true)
+            } else {
+              this.$toast(this.$t('artwork.fav_fail'))
+            }
+          })
+      }
+    },
+    showOriginText() {
+      this.novelText.text = novelTextBak
+      this.isTranslated = false
+    },
+    seriesDlStatusText(status) {
+      return (
+        {
+          pending: this.$t('novel.series.dl_pending'),
+          downloading: this.$t('novel.series.dl_downloading'),
+          done: this.$t('novel.series.dl_done'),
+          error: this.$t('novel.series.dl_error'),
+        }[status] || ''
+      )
+    },
+    async downloadSeriesEpub(seriesId, seriesTitle) {
+      if (!seriesId) return
+      this.seriesDl = {
+        show: true,
+        title: this.$t('novel.series.dl_title'),
+        total: 0,
+        current: 0,
+        items: [],
+        phase: 'fetch',
+        failed: false,
+        errorMsg: '',
+        cancel: false,
+        seriesId,
+        seriesTitle: seriesTitle || `系列_${seriesId}`,
+        _resolvePause: null,
+      }
+      const epub = await runSeriesEpubDownload(seriesId, this.seriesDl.seriesTitle, {
+        onProgress: st => {
+          this.seriesDl.total = st.total
+          this.seriesDl.current = st.current
+          this.seriesDl.items = st.items
+          this.seriesDl.phase = st.phase
+          this.seriesDl.failed = st.failed
+          this.seriesDl.errorMsg = st.errorMsg
+          requestAnimationFrame(() => {
+            document.querySelector('.series-dl-item.downloading')?.scrollIntoView?.()
+          })
+        },
+        onPause: () =>
+          new Promise(resolve => {
+            this.seriesDl._resolvePause = resolve
+          }),
+        shouldCancel: () => this.seriesDl.cancel,
+      })
+      if (this.seriesDl.cancel) {
+        this.seriesDl.show = false
+        return
+      }
+      if (epub) {
+        const safeName = this.seriesDl.seriesTitle.replace(/[\\/:*?"<>|]/g, '_')
+        await downloadFile(epub, `${safeName}.epub`, { subDir: 'novel' })
+        this.seriesDl.show = false
+        this.$toast(this.$t('novel.series.dl_done_toast'))
+      }
+    },
+    retrySeriesDownload() {
+      if (this.seriesDl._resolvePause) {
+        const r = this.seriesDl._resolvePause
+        this.seriesDl._resolvePause = null
+        this.seriesDl.failed = false
+        r('retry')
+      }
+    },
+    cancelSeriesDownload() {
+      this.seriesDl.cancel = true
+      if (this.seriesDl._resolvePause) {
+        const r = this.seriesDl._resolvePause
+        this.seriesDl._resolvePause = null
+        r('cancel')
+      } else {
+        this.seriesDl.show = false
+      }
+    },
+    doDefPnt() {
+      let key = store.state.appSetting.novelDefTranslate
+      // 归一化：AI 翻译类键（sc_ 前缀，含旧格式 'sc_' + 短键）统一为 sc_ai，
+      // 兼容改造后 onPntSelect 仅保留 sc_ai 单键的现状
+      if (key.startsWith('sc_')) {
+        key = 'sc_ai'
+      }
+      if (key.startsWith('sc')) {
+        const mt = store.state.translateConfig
+        const cfg = mt.providers[mt.novelProvider] || {}
+        if (!cfg.apiKey) return
+      }
+      this.onPntSelect({ key, text: key })
+    },
+    async onPntSelect(action) {
+      if (this.translateLoading) return
+      window.umami?.track('translate_novel', { with: action.text })
+      store.commit('setIsNovelViewShrink', false)
+      const fns = {
+        sc_ai: async () => this.fanyi('sc', await getNoTranslateWords(this.artwork.tags)),
+        ms: async () => this.fanyi('ms'),
+        gg: () => this.fanyi('gg'),
+        yd: () => this.fanyi('yd'),
+        kiss_t: async () => {
+          await loadKISSTranslator(false, true)
+          this.kissLoaded = !!document.querySelector('#kiss-translator')
+        },
+        native: () => this.aiTranslate('', '', true),
+      }
+      const fn = fns[action.key]
+      if (fn) {
+        await fn()
+      }
+    },
+    async fanyi(srv, nots) {
+      try {
+        if (srv == 'sc') {
+          const mt = store.state.translateConfig
+          const cfg = mt.providers[mt.novelProvider] || {}
+          if (!cfg.apiKey) {
+            const res = await Dialog.confirm({
+              title: '需要 API Key',
+              message: 'AI 翻译需要自带 Key：请在「翻译设置」中填入你的 OpenAI 兼容 API Key（如 SiliconCloud 免费模型）。',
+              confirmButtonText: '前往设置',
+              cancelButtonText: '取消',
+            }).catch(() => 'cancel')
+            if (res == 'confirm') this.showNovelTransSettings = true
+            return
+          }
+          this.aiTranslate(nots, store.state.translateConfig.novelModel)
+          return
+        }
+
+        this.translateLoading = true
+        const loading = this.$toast.loading({
+          duration: 0,
+          forbidClick: true,
+          message: '加载时间较长，请耐心等待',
+        })
+        const cacheKey = `novel.translate.${this.artwork.id}.${srv}.${nots}`
+        let res = await getCache(cacheKey)
+        if (!res) {
+          let url = `${PIXIV_NEXT_URL}/api/pixiv-novel-translate/${this.artwork.id}.html?srv=${srv}`
+          if (nots) url += `&nots=${nots}`
+          res = await fetch(url).then(r => r.text())
+          // if (!res.includes('Translate failed')) setCache(cacheKey, res)
+          if (!res.startsWith('{')) setCache(cacheKey, res)
+        }
+        this.novelText.text = res
+        loading.clear()
+        this.translateLoading = false
+        this.isTranslated = true
+      } catch (err) {
+        console.log('fanyi err: ', err)
+      }
+    },
+    async aiTranslate(nots, aiModel, isNative = false) {
+      const cacheKey = `novel.translate.${this.artwork.id}.sc.${aiModel}.${nots}.${isNative}`
+      const cacheText = await getCache(cacheKey)
+      if (cacheText) {
+        this.novelText.text = cacheText
+        return
+      }
+      this.translateLoading = true
+      const notsArr = nots ? nots.split(',') : []
+      const novelElement = document.querySelector('.novel_text')
+      let resText = ''
+      let reasoningText = ''
+      let contentStarted = false
+      this.novelText.text = this.$t('tips.loading')
+      // 推理模型思考阶段：阅读区显示一行灰色滚动文字（推理尾部），避免看起来像卡死
+      const renderReasoning = () => {
+        const tail = reasoningText.slice(-100)
+        const lead = reasoningText.length > tail.length ? '…' : ''
+        const html = `<div class="novel-ai-reasoning">💭 ${escapeHtml(lead + tail)}</div>`
+        requestAnimationFrame(() => {
+          novelElement.innerHTML = html
+        })
+      }
+      const callback = chunk => {
+        if (chunk.done) {
+          if (chunk.error) {
+            // 出错且尚未出译文时清掉推理灰字，避免停留在一行静止文字上
+            if (reasoningText && !contentStarted) novelElement.innerHTML = ''
+            this.$toast(chunk.error)
+            this.translateLoading = false
+            return
+          }
+          novelElement.innerHTML = resText
+          this.novelText.text = resText
+          setCache(cacheKey, resText)
+          this.$toast('翻译完毕')
+          this.translateLoading = false
+          this.isTranslated = true
+          return
+        }
+
+        if (chunk.reasoning) {
+          // 译文开始后才到达的推理增量（交错思考模型）直接忽略，避免冲掉已流出的译文
+          if (!contentStarted) {
+            reasoningText += chunk.reasoning
+            renderReasoning()
+          }
+          if (!chunk.content) return
+        }
+        contentStarted = true
+        resText += chunk.content
+        notsArr.forEach((e, i) => {
+          resText = resText.replaceAll(`[名字${i}]`, e)
+          resText = resText.replaceAll(`名字${i}`, e)
+        })
+        resText = resText.replace(/\n/g, '<br>')
+        requestAnimationFrame(() => {
+          novelElement.innerHTML = resText
+        })
+      }
+      if (isNative) {
+        nativeTranslate(novelTextBak, callback)
+      } else {
+        siliconCloudTranslate(novelTextBak, notsArr, aiModel, callback)
+      }
+    },
+  },
+}
+</script>
+
+<style lang="stylus">
+img[src*="https://api.moedog.org/qr/?url="]
+  position absolute
+  top 50%
+  left 50%
+  transform translate(-50%, -50%)
+  width 5rem !important
+  height 5rem !important
+
+.app-main:has(.artwork)
+  padding 0
+
+  .related
+    padding-left 16px
+    padding-right 16px
+
+// 翻译设置弹窗：随 get-container="body" 挂到 body，需全局样式（scoped 不生效）
+// 参照 base.styl .setting-page .van-popup--bottom 的 10rem 居中模式
+.van-popup--bottom.translate-settings-popup
+  left 50%
+  width 10rem
+  height 80%
+  margin-left -5rem
+  overflow hidden
+
+// AI 翻译推理模型思考阶段的灰色滚动提示行（aiTranslate 直改 DOM，非 Vue 渲染）
+.novel-ai-reasoning
+  margin 0.3em 0
+  color #8a8f99
+  font-size 0.85em
+  line-height 1.5
+  white-space nowrap
+  overflow hidden
+
+.dark .novel-ai-reasoning
+  color #67707e
+</style>
+<style lang="stylus" scoped>
+.comments-title
+  padding 40px 0 0 40px
+  font-size 0.45rem
+  font-weight bold
+.artwork
+  .skeleton
+    margin: 30px 0;
+  .more_btn
+    position: fixed;
+    top: 0.9rem;
+    right 0.5rem;
+    z-index: 99;
+    font-size 0.675rem
+    cursor pointer
+    .svg-icon
+      color: #fafafa;
+      filter: drop-shadow(0.02667rem 0.05333rem 0.05333rem rgba(0,0,0,0.8));
+
+  .series-btns
+    display flex
+    flex-direction column
+    gap 10px
+    padding 0 40px
+    ::v-deep
+      .van-button .van-button__text
+        overflow: hidden
+        text-overflow: ellipsis
+        white-space: nowrap
+    &-group
+      display flex
+      flex-wrap wrap
+      gap 10px
+      > *
+        flex 1
+
+  ::v-deep .van-share-sheet
+    width 10rem !important
+    left 50% !important
+    margin-left -5rem !important
+  ::v-deep .van-share-sheet__option:first-child img
+    background: #f2f3f5;
+    border-radius: 50%;
+  ::v-deep .van-share-sheet__options::-webkit-scrollbar
+    height 0.12rem
+
+.ia-cont
+  display flex
+  align-items flex-start
+  min-height 100vh
+
+  .ia-left
+    position relative
+    display flex
+    justify-content center
+    align-items center
+    width 72%
+    min-width 72%
+    margin-top 20px
+    padding 0 20px
+
+    .collapse-btn
+      position absolute
+      z-index 99
+      right 0
+      top 200px
+      display flex
+      justify-content center
+      align-items center
+      width 60px
+      height 60px
+      background #f5f5f5
+      border-top-left-radius 10px
+      border-bottom-left-radius 10px
+      cursor pointer
+      .icon
+        font-size 50px
+        transform rotate(-90deg)
+
+    ::v-deep .image-box
+      width: 100% !important
+      height: auto !important
+      min-width 300px
+      min-height 300px
+      &:not(:last-child)
+        margin-bottom 10px
+
+      .image
+        width auto
+        max-width 100%
+        height auto
+        max-height 96vh
+        margin 0 auto
+
+  .ia-right
+    max-width 28%
+    margin-bottom 60px
+    padding-right 40px
+    box-sizing border-box
+    overflow hidden
+    transform translateX(0)
+    opacity 1
+    transition 0.2s
+    ::v-deep
+      .artwork-meta
+        padding 20px 30px 40px
+        background #f5f5f5
+        border-radius 20px
+        .tag.translated
+          color #808080
+      .shrink::after
+        background: linear-gradient(to top, #f5f5f5, rgba(255,255,255,0));
+
+.artwork
+  ::v-deep .top-bar-wrap
+    width 30vw
+    background none
+
+  .isCollapseMeta
+    justify-content center
+    .ia-left
+      width 100%
+      .collapse-btn
+        position fixed
+        top: 2.7rem;
+        right: 0.4rem;
+        border-radius 10px
+        .icon
+          transform: rotate(90deg);
+    .ia-right
+      transform translateX(100%)
+      opacity 0
+      width 0
+      padding-right 0
+      margin-bottom 0
+
+@media screen and (min-width: 1201px)
+  .ia-cont
+    &:not(:has(.shrink)) .ia-right
+      max-height 100vh
+      overflow-y auto
+      &::-webkit-scrollbar
+        display none
+
+@media screen and (max-width: 1120px)
+  .ia-cont
+    display block !important
+
+  .ia-left
+    width 100% !important
+    margin 0 auto !important
+    padding 0 !important
+
+    .collapse-btn
+      display none !important
+
+    ::v-deep .image
+      max-width: 100% !important
+      max-height: 90vh !important
+    ::v-deep .novel_text:not(.vertical)
+      width 660px
+
+  .ia-right
+    max-width unset !important
+    padding-right 0 !important
+    .artwork-meta
+      margin 20px 10px !important
+      padding 20px 30px
+    ::v-deep
+      .artwork-list
+        height 4.5rem !important
+      .author-card .artwork-list-wrap .artwork-list .swiper-slide .image-slide
+        height 4.2rem !important
+
+.series-dl-dialog
+  width 9rem
+  .series-dl-body
+    padding 0.4rem 0.5rem 0.6rem
+  .series-dl-status
+    text-align center
+    margin 0.3rem 0
+    font-size 0.35rem
+    color #666
+  .series-dl-list
+    max-height 8rem
+    overflow-y auto
+    border 1px solid #eee
+    border-radius 0.2rem
+    margin-bottom 0.4rem
+  .series-dl-item
+    display flex
+    align-items center
+    gap 0.2rem
+    padding 0.15rem 0.3rem
+    font-size 0.35rem
+    border-bottom 1px solid #f5f5f5
+    .idx
+      flex 0 0 auto
+      color #999
+    .tt
+      flex 1
+      overflow hidden
+      text-overflow ellipsis
+      white-space nowrap
+    .st
+      flex 0 0 auto
+      color #999
+    &.downloading .st
+      color #1989fa
+    &.done .st
+      color #07c160
+    &.error .st
+      color #ee0a24
+  .series-dl-actions
+    display flex
+    justify-content flex-end
+    gap 0.3rem
+</style>

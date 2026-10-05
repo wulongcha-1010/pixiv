@@ -1,0 +1,5 @@
+# 统一使用 LF，避免跨平台换行差异
+* text=auto eol=lf
+
+# pnpm 补丁文件必须保持原始字节（换行变化会导致 patch hash 校验失败）
+*.patch -text

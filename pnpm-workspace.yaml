@@ -1,0 +1,12 @@
+packages:
+  - '.'
+
+# pnpm >= 10 不再读取 package.json 里的 pnpm 字段，原配置迁移到这里
+patchedDependencies:
+  swiper@5.4.5: patches/swiper@5.4.5.patch
+
+allowBuilds:
+  core-js: false
+  protobufjs: false
+  swiper: false
+  vue-demi: true

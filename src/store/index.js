@@ -1,0 +1,302 @@
+import Vue from 'vue'
+import Vuex from 'vuex'
+import _ from '@/lib/lodash'
+import { getSettingDef, LocalStorage, SessionStorage } from '@/utils/storage'
+import { isSafari } from '@/utils'
+import { getSelectedLang } from '@/i18n'
+import { isArtworkNotCensored } from '@/utils/filter'
+import { DEF_LLM_API_BASE, SILICON_CLOUD_BASR_URL, SERVER_TRANSLATE_URL, SERVER_TRANSLATE_TOKEN } from '@/consts'
+
+Vue.use(Vuex)
+
+const isMobile = navigator.userAgent.includes('Mobile')
+const defPageTransition = (() => {
+  if (!document.startViewTransition) return ''
+  if (isMobile) return isSafari() ? 'f7-ios' : 'f7-md'
+  return 'f7-dive'
+})()
+
+export default new Vuex.Store({
+  state: {
+    /** @type {number[]} */
+    galleryList: [],
+    /** @type {string[]} */
+    searchHistory: getSettingDef('PIXIV_SearchHistory', []),
+    contentSetting: getSettingDef('PXV_CNT_SHOW', {
+      r18: false,
+      r18g: false,
+      ai: false,
+    }),
+    /** @type {object|null} */
+    user: null,
+    blockTags: getSettingDef('PXV_B_TAGS', '').split(',').map(t => t.trim()).filter(Boolean),
+    blockUids: getSettingDef('PXV_B_UIDS', '').split(',').map(u => u.trim()).filter(Boolean),
+    isNovelViewShrink: true,
+    isMobile,
+    isSafari: isSafari(),
+    /** @type {any[]|null} */
+    appNotice: null,
+    /** @type {string[][]} */
+    scPromo: [],
+    translateConfig: {
+      /** @type {'shinobu'|'vl-api'|'server'} */
+      engine: 'vl-api',
+      /** @type {boolean} 用户是否已同意首次下载 Shinobu 模型 */
+      shinobuModelConsent: false,
+      /** @type {boolean} 用户是否已知晓 HTTP Helper 用户脚本提示 */
+      helperConsent: false,
+      /** @type {'translate'|'erase'|'original'} */
+      processMode: 'translate',
+      bubble: true,
+      sourceLang: 'ja',
+      targetLang: 'zh-CN',
+      /** @type {'google_web'|'microsoft'|'llm'} */
+      translator: 'microsoft',
+      provider: DEF_LLM_API_BASE,
+      /** @type {Record<string, {apiKey?: string, baseUrl?: string, model?: string, modelSelMode?: 'list'|'manual'}>} */
+      providers: {
+        [DEF_LLM_API_BASE]: {
+          apiKey: '****************',
+          baseUrl: DEF_LLM_API_BASE,
+          model: 'THUDM/GLM-4-9B-0414',
+          modelSelMode: 'list',
+        },
+        [SILICON_CLOUD_BASR_URL]: {
+          apiKey: '',
+          baseUrl: SILICON_CLOUD_BASR_URL,
+          model: 'tencent/Hunyuan-MT-7B',
+          modelSelMode: 'list',
+        },
+      },
+      // VL API 引擎独立配置
+      vlProvider: DEF_LLM_API_BASE,
+      vlModel: 'Qwen/Qwen3.5-4B',
+      // 小说翻译独立配置
+      novelProvider: DEF_LLM_API_BASE,
+      /** @type {string} 小说翻译完整模型 id */
+      novelModel: 'tencent/Hunyuan-MT-7B',
+      serverUrl: SERVER_TRANSLATE_URL,
+      serverToken: SERVER_TRANSLATE_TOKEN,
+      ...getSettingDef('PXV_TRANSLATE_CONFIG', {}),
+    },
+    /** @type {any[]|null} */
+    seasonEffects: null,
+    routeHistory: SessionStorage.get('PXV_ROUTE_HISTORY', []),
+    appSetting: {
+      wfType: isMobile ? 'Masonry(CSSGrid)' : 'Justified',
+      imgReso: isMobile ? 'Medium' : 'Large',
+      isLongpressBlock: false,
+      isLongpressDL: false,
+      isEnableSwipe: false,
+      isHideRankManga: false,
+      isUseFancybox: false,
+      isImageFitScreen: isMobile,
+      isImageCardOuterMeta: true,
+      isDirectPximg: false,
+      preferDownloadByFsa: false,
+      preferDownloadByTm: false,
+      dlSubDirByAuthor: false,
+      dlFileNameTpl: '{author}_{title}_{pid}_p{index}',
+      dlFileNameNoSingleP0: false,
+      isImgLazy: isMobile,
+      searchListMinFavNum: '5',
+      isImageCardBorderRadius: true,
+      isImageCardBoxShadow: true,
+      ugoiraDefDLFormat: '',
+      pageTransition: defPageTransition,
+      withBodyBg: true,
+      novelDefDlFormat: '',
+      novelDlRmStyle: false,
+      novelDefTranslate: '',
+      pageFont: /zh-|ja/.test(getSelectedLang()) ? 'LXGW WenKai Screen' : '',
+      hideNavBarOnScroll: true,
+      manualLoadRelated: true,
+      autoPlayUgoira: false,
+      ugoiraMp4Bitrate: '4 Mbps',
+      showFpsDemo: false,
+      isAutoLoadKissT: false,
+      isVirtualList: false,
+      isUgoiraAvifSrc: false,
+      isUgoiraApngSaveAsPng: false,
+      novelFilterNoShortLen: false,
+      novelFilterTextLenMin: 100,
+      novelFilterNoLongTag: false,
+      novelFilterTagLenMax: 30,
+      novelFilterTagSplitMax: 5,
+      searchListPagination: false,
+      navBarAltStyle: navigator.userAgent.toLowerCase().includes('ios'),
+      appStartPage: '',
+      isDefBookmarkPrivate: false,
+      isDefFollowPrivate: false,
+      isDefBookmarkAddTags: false,
+      isAutoFollowAfterBookmark: false,
+      isAutoDownLoadAfterBookmark: false,
+      isAutoBookmarkAfterDownload: false,
+      isLongpressPrivateBookmark: false,
+      isLongpressPrivateFollow: false,
+      imgViewHorizonScroll: false,
+      imgViewHorizonSwiper: false,
+      ctrlClickNewTab: !isMobile,
+      openArtDetailAsPopup: false,
+      isExpandMultiPArtwork: false,
+      showPIDMask: !localStorage.PXV_ACT_COLOR,
+      useNovelWebview: false,
+      searchDefaultIdType: '',
+      ...getSettingDef('PXV_APP_SETTING', {}),
+    },
+  },
+  getters: {
+    isLoggedIn(state) {
+      return Boolean(state.user)
+    },
+    isR18On(state) {
+      return state.contentSetting.r18 || state.contentSetting.r18g
+    },
+    blockTagsSet: state => new Set(state.blockTags),
+    blockUidsSet: state => new Set(state.blockUids),
+    isCensored: state => artwork => !isArtworkNotCensored(artwork, state),
+    isNoOuterMeta(state) {
+      return state.appSetting.isVirtualList || ['VirtualSlide', 'Justified(Transform)', 'Masonry2'].includes(state.appSetting.wfType)
+    },
+    wfProps: () => ({
+      gutter: '8px',
+      cols: {
+        300: 1,
+        600: 2,
+        900: 3,
+        1200: 4,
+        1600: 5,
+        1920: 6,
+        2400: 7,
+        2700: 8,
+        3000: 9,
+        default: 6,
+      },
+    }),
+    novelMyProps: () => ({
+      gutter: '8px',
+      cols: {
+        600: 1,
+        1200: 2,
+        1600: 3,
+        default: 4,
+      },
+    }),
+  },
+  mutations: {
+    setGalleryList(state, list = []) {
+      if (state.appSetting.isEnableSwipe) state.galleryList = list.map(e => e.id)
+    },
+    setSearchHistory(state, obj) {
+      if (obj === null) {
+        state.searchHistory = []
+        LocalStorage.remove('PIXIV_SearchHistory')
+      } else {
+        if (state.searchHistory.includes(obj)) return false
+        if (state.searchHistory.length >= 20) state.searchHistory.pop()
+        state.searchHistory.unshift(obj)
+        LocalStorage.set('PIXIV_SearchHistory', state.searchHistory)
+      }
+    },
+    saveContentSetting(state, obj) {
+      state.contentSetting = obj
+      LocalStorage.set('PXV_CNT_SHOW', obj)
+    },
+    setUser(state, user) {
+      state.user = user
+    },
+    setBlockTags(state, arr) {
+      if (Array.isArray(arr)) {
+        state.blockTags = _.uniq([...state.blockTags, ...arr])
+        LocalStorage.set('PXV_B_TAGS', state.blockTags.join(','))
+      }
+    },
+    setBlockUids(state, arr) {
+      if (Array.isArray(arr)) {
+        state.blockUids = _.uniq([...state.blockUids, ...arr])
+        LocalStorage.set('PXV_B_UIDS', state.blockUids.join(','))
+      }
+    },
+    addBlockUids(state, arr) {
+      if (Array.isArray(arr)) {
+        state.blockUids = _.uniq([...state.blockUids, ...arr])
+      }
+    },
+    removeBlockTag(state, tag) {
+      state.blockTags = state.blockTags.filter(t => t !== tag)
+      LocalStorage.set('PXV_B_TAGS', state.blockTags.join(','))
+    },
+    removeBlockUid(state, uid) {
+      state.blockUids = state.blockUids.filter(u => u !== uid)
+      LocalStorage.set('PXV_B_UIDS', state.blockUids.join(','))
+    },
+    setIsNovelViewShrink(state, val) {
+      state.isNovelViewShrink = val
+    },
+    setAppNotice(state, val) {
+      state.appNotice = val
+    },
+    setScPromo(state, val) {
+      if (Array.isArray(val) && val.length) {
+        state.scPromo = val
+      }
+    },
+    setSeasonEffects(state, val) {
+      state.seasonEffects = val
+    },
+    setAppSetting(state, obj) {
+      state.appSetting = { ...state.appSetting, ...obj }
+      LocalStorage.set('PXV_APP_SETTING', { ...getSettingDef('PXV_APP_SETTING', {}), ...obj })
+    },
+    setRouteHistory(state, val) {
+      state.routeHistory = val
+      SessionStorage.set('PXV_ROUTE_HISTORY', val)
+    },
+    SET_TRANSLATE_CONFIG(state, patch) {
+      window.umami?.track('SET_TRANSLATE_CONFIG', {
+        patch: JSON.stringify(patch, (k, v) => (k == 'apiKey' || k == 'serverToken') ? '[REDACTED]' : v),
+      })
+      state.translateConfig = {
+        ...state.translateConfig,
+        ...patch,
+        providers: {
+          ...state.translateConfig.providers,
+          ...(patch.providers || {}),
+        },
+      }
+      LocalStorage.set('PXV_TRANSLATE_CONFIG', state.translateConfig)
+    },
+  },
+  actions: {
+    setGalleryList({ commit }, list) {
+      commit('setGalleryList', list)
+    },
+    setSearchHistory({ commit }, value) {
+      commit('setSearchHistory', value)
+    },
+    appendBlockTags({ commit }, value) {
+      commit('setBlockTags', value)
+    },
+    removeBlockTag({ commit }, tag) {
+      commit('removeBlockTag', tag)
+    },
+    appendBlockUids({ commit }, value) {
+      commit('setBlockUids', value)
+    },
+    removeBlockUid({ commit }, uid) {
+      commit('removeBlockUid', uid)
+    },
+  },
+})
+
+export const novelTextConfig = Vue.observable({
+  size: 16,
+  height: 2,
+  font: 'inherit',
+  weight: 400,
+  direction: 'h',
+  color: '#1f1f1f',
+  bg: '#ffffff',
+  indent: false,
+  ...getSettingDef('PXV_TEXT_CONFIG', {}),
+})

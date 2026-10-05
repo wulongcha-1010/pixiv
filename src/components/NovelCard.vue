@@ -1,0 +1,238 @@
+<template>
+  <div v-longpress="onLongpress" class="novel-card" @click.stop="click(artwork.id)" @contextmenu="preventContext">
+    <div v-if="showImg" class="img-cont">
+      <Pximg :src="imgSrc" :alt="artwork.title" class="image" :class="{ censored }" />
+    </div>
+    <div class="meta" :class="{ censored }">
+      <div v-if="artwork.series && artwork.series.id" class="series">{{ artwork.series.title }}</div>
+      <div class="content">
+        <h2 class="title">{{ artwork.title }}</h2>
+        <div class="author"><span style="color:#999">by</span>&nbsp;{{ artwork.author.name }}</div>
+      </div>
+      <div class="novel_tags ispx">
+        <span v-for="t in novelTagsText" :key="t">{{ t }}</span>
+      </div>
+      <div class="novel_tips">
+        <van-tag v-if="index">#{{ index }}</van-tag>
+        <van-tag v-if="tagText" :color="tagText === 'R-18' ? '#fb7299' : '#ff3f3f'">{{ tagText }}</van-tag>
+        <van-tag v-if="isAiIllust" color="#536cb8">&nbsp;AI&nbsp;</van-tag>
+        <van-tag color="#cdeefe" text-color="#0b6aaf">{{ $t('P8RGkre-rnlFxZ18aH2VW', [convertToK(artwork.text_length)]) }}</van-tag>
+        <van-tag color="#ffe1e1" text-color="#ad0000">
+          <van-icon name="like-o" style="margin-right: 2px;" />
+          {{ artwork.like }}
+        </van-tag>
+      </div>
+      <div v-if="showCaption" class="novel_caption" v-html="artwork.caption"></div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { Dialog } from '@/lib/vant-apis'
+import { mapGetters } from 'vuex'
+import { formatIntlNumber } from '@/utils'
+import { isCNLocale } from '@/i18n'
+
+export default {
+  name: 'NovelCard',
+  props: {
+    artwork: {
+      type: Object,
+      required: true,
+    },
+    index: {
+      type: Number,
+    },
+    square: {
+      type: Boolean,
+      default: false,
+    },
+    showImg: {
+      type: Boolean,
+      default: true,
+    },
+    showCaption: {
+      type: Boolean,
+      default: false,
+    },
+    noLongpress: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  data() {
+    return {}
+  },
+  computed: {
+    ...mapGetters(['isCensored']),
+    censored() {
+      return this.isCensored(this.artwork)
+    },
+    imgSrc() {
+      return this.artwork.images[0][this.square ? 's' : 'm']
+    },
+    isAiIllust() {
+      return this.artwork.illust_ai_type == 2
+    },
+    tagText() {
+      if (this.artwork.x_restrict == 1) {
+        return 'R-18'
+      } else if (this.artwork.x_restrict == 2) {
+        return 'R-18G'
+      } else {
+        return ''
+      }
+    },
+    novelTagsText() {
+      return this.artwork.tags?.map(e => `#${e.name}`)
+    },
+  },
+  methods: {
+    convertToK(val) {
+      if (!val) return '-'
+      if (isCNLocale()) return val
+      return formatIntlNumber(+val)
+    },
+    click(id) {
+      if (
+        !id ||
+        (this.$route.name === 'Artwork' && this.$route.params.id == id)
+      ) { return false }
+
+      this.$emit('click-card', id)
+    },
+    onLongpress(/** @type {Event} */ ev) {
+      if (this.noLongpress) return
+      ev.preventDefault()
+      this.showBlockDialog()
+    },
+    preventContext(/** @type {Event} */ event) {
+      if (this.noLongpress) return true
+      event.preventDefault()
+      return false
+    },
+    showBlockDialog() {
+      Dialog.confirm({
+        title: this.$t('1a1meIFthYyv_s7C4M4L0'),
+        message: `
+        <div id="sel_block_dialog">
+          <p style="margin:0.2rem 0">${this.$t('mK4Dqnx_FvC3JhJMR4B4t')}</p>
+          <div class="sel_block_chks"><input type="checkbox" data-author="${this.artwork.author.id}">${this.artwork.author.name}(${this.artwork.author.id})</div>
+          <div style="height:1px;margin:0.2rem 0;border-bottom:1px solid #ccc"></div>
+          <p style="margin:0.2rem 0">${this.$t('1NIKIVhrUKhUHhuWv3Sxt')}</p>
+          ${(this.artwork.tags || []).map(e => `<div class="sel_block_chks" style="margin-bottom:0.1rem"><input type="checkbox" data-tagname="${e.name}"><span style="text-align: left;">${e.name}</span></div>`).join('')}
+        </div>`,
+        lockScroll: false,
+        closeOnPopstate: true,
+        cancelButtonText: this.$t('common.cancel'),
+        confirmButtonText: this.$t('common.confirm'),
+        beforeClose: (action, done) => {
+          if (action == 'confirm') {
+            const authors = document.querySelectorAll('#sel_block_dialog input[data-author]:checked')
+            const tags = document.querySelectorAll('#sel_block_dialog input[data-tagname]:checked')
+            if (authors.length) {
+              this.$store.dispatch('appendBlockUids', [...authors].map(e => e.getAttribute('data-author')))
+            }
+            if (tags.length) {
+              this.$store.dispatch('appendBlockTags', [...tags].map(e => e.getAttribute('data-tagname')))
+            }
+          }
+          done()
+        },
+      }).catch(() => {})
+    },
+  },
+}
+</script>
+
+<style lang="stylus" scoped>
+.novel-card {
+  position: relative;
+  display: flex;
+  align-items flex-start
+  overflow: hidden;
+  background: #f5f5f5;
+  padding 20px
+  margin-bottom: 15px;
+  border-radius: 20px;
+  border-bottom 1px solid #ccc
+  cursor pointer
+
+  .img-cont {
+    position relative
+    width: 2rem;
+    min-width 2rem;
+    min-height 3rem
+  }
+
+  .image {
+    width: 100%;
+    height: auto;
+
+    &[lazy="loading"] {
+      position absolute
+      width: 100px;
+      height: 100px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .novel_tags {
+    margin-top 0px
+    padding 0 20px
+    color #858585
+    &.ispx {
+      font-size 13px
+    }
+    span {
+      margin-right 16px
+    }
+  }
+
+  .novel_tips {
+    margin-top 20px
+    padding 0 20px
+  }
+
+  .novel_caption {
+    margin-top 20px
+    padding 0 20px
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .series {
+    margin-bottom 8px
+    padding 0 16px
+    font-size 20px
+    color: #faa200;
+  }
+
+  .meta {
+    .content {
+      width: 100%;
+      padding: 0 14px 18px;
+      box-sizing: border-box;
+
+      .author {
+        display: flex;
+        align-items: center;
+        font-size: 23px;
+        font-weight: 400;
+      }
+
+      .title {
+        line-height: normal;
+        font-size: 28px;
+        margin-bottom: 10px;
+        font-weight 600
+      }
+    }
+  }
+}
+</style>

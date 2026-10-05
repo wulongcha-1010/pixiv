@@ -1,0 +1,775 @@
+## [unreleased]
+
+### 🚀 Features
+
+- Per-page download selection, pximg thumb cache, novel export fix
+
+### 🐛 Bug Fixes
+
+- Pagination end detection and honest list error semantics
+
+### ⚙️ Miscellaneous Tasks
+
+- Update docs
+- Update link
+## [1.37.5] - 2026-09-23
+
+### 🚀 Features
+
+- Add theme color
+- Add novel rich text formats
+- Novel scroll position record
+- Remove p0 in filename
+- Original novel webview reader
+- New artworks search params
+- *(sync)* Add SyncManager core module with PBKDF2 key derivation and AES encryption
+- *(sync)* Redesign cloud sync with dual-input auth scheme
+- *(sync)* Handle upload conflict with 409 response
+- *(sync)* Add smart merge and timestamp isolation, disable auto-sync
+- *(sync)* Update dialog with conflict detection and accurate copy
+- *(block)* Improve block tag/uid management with tag-based UI and individual remove actions
+- *(sync)* Add scope selection UI and partial sync with data merge
+- Add manga image translation utility and panel component
+- Integrate manga image translation into artwork page
+- Manga image translation — streaming, raw text, desktop panel
+- Improve search UX — editable cursor and numeric ID navigation
+- *(translate)* Define pipeline types and data structures
+- *(translate)* Add multi-provider LLM translation with prompt engineering
+- *(translate)* Add Canvas horizontal and vertical typesetting engine
+- *(translate)* Add translation settings store and config UI
+- *(translate)* Add Canvas overlay component for translated images
+- *(translate)* Add original/translated image toggle
+- *(translate)* Wire new translation pipeline into artwork view
+- *(translate)* Add ONNX Runtime Web worker architecture
+- *(translate)* Add model manifest and CDN loading
+- *(translate)* Implement Worker inference bridge with provider fallback
+- *(translate)* Add sequential model loading with progress
+- *(translate)* Add ONNX text detection module with heuristic fallback
+- *(translate)* Add PaddleOCR recognition module with preprocess and CTC decode
+- *(translate)* Add text line merging and reading order sorting
+- *(translate)* Add ONNX inpainting module for text removal
+- *(translate)* Add mask refinement from OCR regions
+- *(translate)* Implement pipeline orchestrator connecting all stages
+- *(translate)* Add per-stage error handling and fallback
+- *(translate)* Add reading mode bottom toolbar
+- *(translate)* Add translation progress visualization
+- *(translate)* Add dev-only debug panel
+- *(translate)* Add advanced settings (auth modes, cache mgmt, model diagnostics)
+- *(translate)* Wire pipeline to Artwork page with dual-engine dispatch
+- *(translate)* Rework onnx runtime with CDN dual-mode
+- *(translate)* Rework pipeline core stages
+- *(translate)* Add typeset kinsoku engine
+- *(translate)* Rework LLM providers with auth modes
+- *(translate)* Adapt artwork UI components
+- *(translate)* Port shinobu runtime and workers
+- *(translate)* Port shinobu pipeline modules
+- *(translate)* Port shinobu typeset orchestrator and translators
+- *(translate)* Adapt UI for shinobu engine and update config
+- *(translate)* Models from prerelease CDN with sha256 + URL template env
+- *(translate)* LLM preset dropdown, VL model selector, mangaTrans store nesting
+- *(translate)* Crop bubble masks to single-channel to fix OOM
+- *(theme)* Switchable visual theme system (sakuria/MD3/iOS26)
+- Manga translate by shinobu server
+- *(server)* Adapt translate engine to shinobu-server async job API
+- *(store)* Add novelDefAiModel appSetting default
+- *(translate)* Add novel translation settings panel component
+- *(translate)* Wire novel translation settings into Novel page
+- *(translate)* Allow manga translation without login
+- Expand cache clearing for translate and pxcl caches
+- Add page jump markers and links in novel view
+- Add unified LLM request layer (llmClient.js) with SSE parsing and CORS fallback
+- Store 增加 VL/小说独立 Provider 配置并收紧 umami 脱敏
+- Add LlmModelSelect component (dropdown/manual model id switch)
+- MangaTranslateSettings VL 引擎接入 BYOK（独立 Provider/模型，移除登录门控）
+- Novel translate settings BYOK provider/model config (Task 5)
+- 小说翻译调用链接入 BYOK（Task 6）
+- *(translate)* BYOK VL engine call chain — pass vlApiConfig to manga.js
+- BYOK LLM translation + personal workspace sync
+- Member artworks aspect filter
+- Novel card longpress block dialog
+- Manual input for app api proxy
+
+### 🐛 Bug Fixes
+
+- App api language header
+- Settings export to json
+- Style fix
+- Img large src replace fail
+- Back button home path
+- Ugoira popup locale
+- Image view swiper refresh
+- Masonry grid component
+- Masonry grid component
+- Swiper mixin
+- Swiper mixin
+- Some glitches
+- Download toast
+- Block tags using Set
+- Some glitches
+- Update filter
+- Update translate model
+- Update sync dialog style
+- Remove redundant dynamic import in handleRetry
+- *(Users)* Remove conflicting loading guard in FavoriteNovels pagination
+- *(api)* Add max_bookmark_id=0 cleanup for novel bookmarks endpoint
+- *(Account)* Remove conflicting loading guard in MyBookmarksNovel pagination
+- *(translate)* Add memory management, SW exclude, integrity checks, CDN config
+- *(translate)* Edge case handling, memory cleanup, and worker build config
+- *(translate)* Wire modelRegistry to onnxBridge with session cache and model binary cache
+- *(translate)* Blob result cache, image CORS fallback, dynamic import, remove toolbar buttons
+- *(translate)* Remove env guard, restore diagnostics, google proxy, wasm SW cache
+- *(translate)* Shinobu UX 修复（9 项问题 + 3 项 Metis 发现）
+- *(translate)* Onnx-worker 模型缓存 quota 错误处理
+- Manga translate bug fixes
+- Manga translate bug fixes
+- *(translate)* TranslateDebug data + consent dialog + extension links
+- *(translate)* Release shinobu model memory + clear model cache + misc cleanup
+- *(translate)* Helper script prompt + live stage timings + misc UI
+- *(translate)* Force CPU (WASM) inference on mobile
+- Style fixes
+- Style syntax fix
+- Style syntax fix
+- Change manga translate default model
+- Change translate storage key
+- Manga translate bug fixes
+- Style fix and translation settings group
+- Show cursor in novel search input
+- Normalize helper headers (C-1), buffer SSE across chunks (I-1), wrap fallback errors (I-2)
+- 小说翻译失败走假成功路径 + 清理不可达死代码（Task 6 review）
+- 终审修复 — resolveVlModel 放宽白名单兜底 + doDefPnt 键归一化
+- Translate settings
+- Translate settings and style fixes
+- Filename template
+- Style fixes
+- Microsoft translate
+- Style fixes
+- Ios style fixes
+- Novel download meta header and series epub
+- Ios style fixes
+- Novel epub series download sleep
+- Safari style fixes
+- Safari style fixes
+- Change default ai translate provider
+- Ios style fix
+- Update locales
+- Novel hc layout paging
+- Style fixes
+- Style fix
+- Show novel ai translate reasoning
+
+### 💼 Other
+
+- *(translate)* Switch to CDN model loading
+
+### 🚜 Refactor
+
+- Extract PanelContent to eliminate template duplication
+- *(translate)* Remove legacy onnx pipeline and providers
+- *(translate)* Rename manga translate components with Manga prefix
+- *(translate)* Decouple isAutoTrigger in loadKISSTranslator
+- *(setting)* Remove novel default translate service, relocate KISS setting
+- *(feed)* Persist feeds last-seen id via LocalStorage
+
+### 📚 Documentation
+
+- Update readme
+- *(agents)* Playwright QA notes + Shinobu translation operational notes
+- Update docs
+- Update readme
+
+### ⚡ Performance
+
+- *(vant)* Unify to lib build via vant-apis facade
+- *(ort)* Isolate onnxruntime-web chunk and exclude from SW precache
+- Non-blocking member info supplement
+
+### 🎨 Styling
+
+- *(translate)* Adjust settings panels typography and spacing
+- *(theme)* Sakuria card-first containers for detail/user pages
+- *(theme)* Refine iOS26 glass + MD components per reference libs
+- Tweak manga translate settings help text
+- Apply lint --fix quote-props to llmClient.js
+- Fix attributes-order in MangaTranslateSettings vl-model-select
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.33.1
+- Release v1.34.0
+- Rename components
+- Release v1.34.1
+- Release v1.34.2
+- Release v1.34.3
+- Release v1.34.4
+- Release v1.35.0
+- Update deps
+- Init AGENTS.md
+- Update deps
+- Release v1.35.1
+- Release v1.35.2
+- Ignore docs/superpowers
+- Release v1.35.3
+- Release v1.35.4
+- Release v1.35.5
+- *(translate)* Add model download scripts and manifest assets
+- *(translate)* Update model manifest and download script
+- *(translate)* Pin comlink to exact version
+- 启用模型 CDN env 配置 + 油猴域名白名单
+- *(license)* MIT → GPL-3.0 due to ShinobuTranslator derivation
+- *(license)* GPL-3.0 → AGPL-3.0 + THIRD_PARTY_NOTICES
+- Disable model CDN env defaults + pxcl SW cache exclusion
+- Release v1.36.0
+- Release v1.36.1
+- Release v1.36.2
+- Release v1.36.3
+- Release v1.36.4
+- Release v1.36.5
+- Remove Yuki service references
+- *(byok)* 移除内置 SiliconCloud Key 常量与 env，helper @connect 扩充 + 文档 BYOK 化 (T8+T9)
+- Release v1.37.0
+- Update lodash
+- Patch swiper
+- Release v1.37.1
+- Release v1.37.2
+- Release v1.37.3
+- Release v1.37.4
+- Update docs
+- Update locales and docs
+- Update locales
+- Update locales
+- Add app landing page
+- Release v1.37.5
+## [1.33.0] - 2026-04-12
+
+### 🚀 Features
+
+- Show pid mask setting
+- Show pid mask setting
+
+### 🐛 Bug Fixes
+
+- Some glitches
+
+### ⚙️ Miscellaneous Tasks
+
+- Update docs
+- Release v1.33.0
+## [1.32.2] - 2026-03-21
+
+### 🚀 Features
+
+- Search uid link auto jump
+- Manual load related works
+- Novel search params
+- Feeds page more tabs
+- Auto play ugoira
+- Large webp detail image
+- Feeds last seen hint
+- Novel reading paging
+- History import/export
+- Add virtual list layouts
+- Image card box shadow setting
+- Ugoira to mp4 bitrate setting
+- Fps indicator
+- Virtual justified layout
+- KISS Translator script
+- Chrome Native Translator
+- List ugoira auto play
+- Novel save as epub
+- Non-Chinese novel filter
+- Novel text indent setting
+- Illust search aspect ratio filter
+- Search list pagination
+- Novel save as pdf
+- Novel save as doc/markdown
+- Users page age filter
+- Add private bookmark
+- Novel font select
+- Navbar alt style
+- Home image list slides
+- App start page setting
+- Novel bookmark add/delete
+- Illust/novel bookmark restrict filter
+- Follow user privately
+- Bookmark & follow settings
+- Pxcl bookmarks page
+- Add th-TH/ms-MY locales
+- Search tag story
+- Ugoira avif download
+- Add collections top
+- Collection detail
+- Collection related
+- Collection search
+- User collections
+- Pixivision stories
+- Popular illust restrict and type
+- User x(twitter) media list
+- Add filename template var
+- Image detail view horizon scroll
+- Open link in new page with meta/ctrl pressed (#77)
+- Ctrl click new tab setting
+- Expand multi pics artwork
+- New home feeds
+
+### 🐛 Bug Fixes
+
+- Some glitches
+- Default font
+- Locale/localapi init order
+- Update ai tags filter
+- Ai art not filtered
+- Update styles
+- Update style
+- Wrong last seen feeds
+- Bug fixes
+- Bug fixes
+- Wrong block tag in art detail
+- Style glitches
+- Virtual swiper glitches
+- Illust search params fix
+- Http get retry
+- Remove home lives tab
+- Bug fixes
+- Drop imt sdk
+- Style fix
+- Longpress directive fix
+- Real illust rank index
+- Search date one year limit
+- Home layout after login
+- Virtual list setting
+- Lock file
+- Novel filter
+- Novel download
+- Home popular illusts
+- Bug fixes
+- Artwork filename example
+- Update recommend links
+- Fix some glitches
+- Fix some glitches
+- Novel pdf fix
+- Comment/profile filter
+- Bug fixes
+- Import history error
+- Season effect
+- Novel translate button hide
+- Rollback the fucking v-lazy defaults to false
+- Hide bookmark button in popular/discovery page
+- Copy share text
+- Season effect cover style
+- Member illust tags style
+- Search results jump page
+- Bug fixes
+- Bug fixes
+- Bug fix
+- Novel season effect
+- Drop mint-filter
+- Bug fixes
+- Page screen fit defaults to false
+- Update links
+- Style fix
+- Font css link
+- Spotlight ugoira play
+- Pxcl fix
+- Filter fix
+- Style fix
+- Novel filter fix
+- Collection detail
+- Collection detail
+- Style fix
+- Collection search
+- Drop fucking v-lazy
+- Img lazy load
+- Localforage auto clean
+- Collections fix
+- Discovery restrict
+- Home manga/novel restrict
+- Auto refresh access token
+- Spotlights all
+- Style fixes
+- Fix some glitches
+- Image search
+- Some glitches
+- New illust restrict
+- Some glitches
+- Image detail view horizon swiper
+- Direct pximg load error
+- Some glitches
+- Some glitches
+- Update links
+- Media queries
+- Some glitches
+- Clear single history
+- Open illust detail as popup
+- Bug fixes
+- Bug fix
+- Bug fixes
+- Search type quick jump
+- New home feeds
+- Home feed large img
+- Style fix
+
+### 📚 Documentation
+
+- Update locales
+- Update locales
+- Update readme
+- Update readme
+- Update readme
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.25.5
+- Update desc
+- Update links
+- Update link
+- Release v1.26.0
+- Release v1.26.1
+- Release v1.26.2
+- Release v1.26.3
+- Release v1.26.4
+- Release v1.26.5
+- Release v1.27.0
+- Release v1.27.1
+- Release v1.27.2
+- Release v1.27.3
+- Release v1.27.4
+- Release v1.28.0
+- Release v1.28.1
+- Release v1.28.2
+- Release v1.28.3
+- Release v1.29.0
+- Release v1.29.1
+- Release v1.29.2
+- Release v1.29.3
+- Release v1.29.4
+- Release v1.29.5
+- Release v1.29.6
+- Release v1.29.7
+- Release v1.30.0
+- Release v1.30.1
+- Release v1.31.0
+- Release v1.31.1
+- Release v1.31.2
+- Release v1.31.3
+- Fxck nosa
+- Release v1.31.4
+- Release v1.31.5
+- Add pnpm onlyBuiltDependencies
+- Release v1.31.6
+- Release v1.31.7
+- Release v1.31.8
+- Release v1.31.9
+- Release v1.31.10
+- Release v1.31.11
+- Release v1.31.12
+- Release v1.32.0
+- Release v1.32.1
+- Release v1.32.2
+## [1.25.5] - 2025-05-11
+
+### 🚀 Features
+
+- Novel translate
+- User tags
+- Autoload imt sdk
+- Season effects
+- Ugoira webcodec mp4
+- Download file w/ fsa
+- Download setting
+- Image card radius setting & ugoira default dowload format
+- Alt masonry layouts
+- Page bg setting
+- Page font
+- Hide navbar on scroll setting
+
+### 🐛 Bug Fixes
+
+- Update links
+- Update links
+- Loading tips
+- Update loading tip
+- Update qr api & pclient ua
+- Update translate service
+- Update setting text
+- Recommend paging
+- Related works paging
+- Adjust lazyload preload param
+- Add route alias
+- Update img search err msg
+- Update imt load&config
+- Client side ai translate
+- Update domain
+- Update notice display
+- Update helper.user.js
+- Update novel style
+- Update style
+- Update style
+- Update style
+- Novel id shortcut
+- Rank favs filter
+- Update style
+- Update styles
+- Refreshing tip
+- Update settings style
+- Update style
+- Drop the fucking svg-sprite-loader
+- Back to vue-svg-icon
+- Download filename format
+- App setting store
+- Adjust login redir
+- No v-lazy
+- Bug fix
+- Block shameless uid 14225123 in ranking
+- Bug fixes
+- Bug fixes
+- Bug fixes
+- Update accent colors
+- Update locales
+- Update locale
+- Primary color reset
+- Update locales
+- Safari date error
+- Update locales
+- Update default rank block uids
+- Update style
+- Update novel translate
+- Update links
+- Update colors
+- Update styles & search type
+- Bug fix
+- Search restrict filter
+- Bug fix
+- Bug fix
+- Bug fixes
+- Bug fixes
+- Update styles
+- Search bug fix
+- Page transition
+- Bug fix
+- Temp pid recover
+- Pass art detail from list
+- Art history record
+- Update style
+- Bug fix
+- Update artwork filter
+- Novel setting
+- Bug fixes
+- Safari blank page
+- Notice date query
+- Spotlight img check
+- User info api fallback
+- Bug fixes
+- Update styles
+- Bug fix
+- History no limit
+- Update translate settings
+- *(zh_TW)* Fixed a lot of zh_TW strings (#65)
+
+### 📚 Documentation
+
+- Update readme
+- Update readme en
+- Update readme
+- Update readme
+- Update readme
+- Update docs
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.18.0
+- Release v1.18.1
+- Release v1.18.2
+- Release v1.18.3
+- Release v1.19.0
+- Release v1.19.1
+- Release v1.19.2
+- Release v1.19.3
+- Release v1.19.4
+- Release v1.19.5
+- Release v1.20.0
+- Release v1.20.1
+- Release v1.20.2
+- Update deps
+- Add fsa util
+- Release v1.21.0
+- Release v1.21.1
+- Release v1.22.0
+- Release v1.22.1
+- Release v1.22.2
+- Update lock file
+- Release v1.22.3
+- Release v1.22.4
+- Release v1.22.5
+- Release v1.22.6
+- Release v1.22.7
+- Release v1.22.8
+- Release v1.22.9
+- Release v1.22.10
+- Release 1.22.11
+- Release v1.22.12
+- Release v1.23.0
+- Release v1.23.1
+- Release v1.24.0
+- Release v1.24.1
+- Release v1.24.2
+- Release v1.24.3
+- Release v1.24.4
+- Release v1.25.0
+- Release v1.25.1
+- Release v1.25.2
+- Release v1.25.3
+- Update locales
+## [1.17.5] - 2024-05-24
+
+### 🚀 Features
+
+- Notice env preset
+- Add image list fill screen setting
+- Add novel comments popup
+- Add novel feeds
+- User follow hint & recommended Illust load more
+- Add lives page
+- Checkl ai probability btn
+- Settings export & import
+- Add backtop button
+- Accent color setting
+- Pximg direct mode
+- Fancybox option
+- Uid block in users page
+- Image card title longpress preview
+
+### 🐛 Bug Fixes
+
+- Change style
+- Search keywords bug
+- Update texts
+- Update index.html
+- Search novel not found
+- Migrate novel text to web api
+- Novel embeded images
+- Update style
+- Update style
+- Use webview_novel to get novel text
+- (maybe) ai bagde
+- Live_list api cache
+- Spotlight detail empty
+- Replace url & add ugoira to apng
+- Maybe-ai check not updated in time
+- Update style
+- Image view style in safari
+- Adjust ai artwork judgment
+- Hide ai tag illust in normal rank list
+- Change styles
+- Update links
+- Add backup sites
+- Use web api fetch hidden images
+- Change styles
+- Update helper userscript
+- Update style
+- Update feedback links
+- Update api urls
+- Comments popup
+- Update locales & user api
+- Some glitches
+- Update config
+- Some glitches
+- Error msg
+- Update styles
+- Update styles
+
+### 📚 Documentation
+
+- Update faq
+- Update readme
+- Update readme
+
+### ⚙️ Miscellaneous Tasks
+
+- Release v1.13.8
+- Release v1.13.9
+- Release v1.14.0
+- Release v1.14.1
+- Drop bootcdn
+- Release v1.14.2
+- Release v1.14.3
+- Release v1.14.4
+- Release v1.15.0
+- Release v1.15.1
+- Release v1.16.0
+- Release v1.16.1
+- Release v1.16.2
+- Release v1.16.3
+- Release v1.16.4
+- Release v1.16.5
+- Release v1.16.6
+- Release v1.17.0
+- Release v1.17.1
+- Release v1.17.2
+- Release v1.17.3
+- Release v1.17.4
+- Migrate to netlify
+- Release v1.17.5
+## [1.13.7] - 2024-02-01
+
+### 🚀 Features
+
+- 添加作者信息页
+- 添加缓存清理功能
+- 微调样式
+- 支持动图作品
+- 动图支持下载; fix: 一些切换动图作品时会触发的bug
+- 优化 gif 和 webm 导出
+- 优化布局样式
+- 样式微调
+- 样式微调
+- 添加小说阅读器
+- (wip)左右翻页
+
+### 🐛 Bug Fixes
+
+- Wrong dependencies
+- Remove some resources
+- Bug fixes & style changes
+- Update words.txt url
+- No search results
+- Change styles
+- Change styles
+- Rollback contents restriction
+- No search result when clicking tags
+- Add consts file
+- Settings save
+- Change users page topbar style
+- Spotlight image card loading style
+- Update ugoira converter link
+
+### 💼 Other
+
+- *(deps)* Bump websocket-extensions from 0.1.3 to 0.1.4
+- 优化样式
+- Pwa配置
+- 完善一些细节
+- (wip)优化小说翻页手感
+- 优化小说翻页手感
+- 添加粗体
+
+### 📚 Documentation
+
+- 更新文档
+- 更新文档
+- 更新文档
+- 更新文档
+
+### 🎨 Styling
+
+- 优化底栏icon样式
+
+### ⚙️ Miscellaneous Tasks
+
+- 重构部分代码
+- 依赖版本
+- 减小包体大小
+- Release v1.13.3
+- Release v1.13.4
+- Release v1.13.5
+- Release v1.13.6
+- Release v1.13.7

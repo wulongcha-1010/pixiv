@@ -1,0 +1,133 @@
+<template>
+  <div class="illusts">
+    <masonry v-bind="novelMyProps">
+      <NovelCard
+        v-for="art in artList"
+        :key="art.id"
+        v-longpress="clearSingleFn(art.id)"
+        :artwork="art"
+        no-longpress
+        @click-card="toArtwork($event)"
+      />
+    </masonry>
+    <van-empty v-if="!artList.length" :description="$t('tips.no_data')" />
+  </div>
+</template>
+
+<script>
+import { Dialog } from '@/lib/vant-apis'
+import { getCache, setCache } from '@/utils/storage/siteCache'
+import NovelCard from '@/components/NovelCard.vue'
+export default {
+  name: 'SettingHistoryNovel',
+  components: {
+    NovelCard,
+  },
+  data() {
+    return {
+      artList: [],
+      isLongpressing: false,
+      novelMyProps: {
+        gutter: '8px',
+        cols: {
+          600: 1,
+          1200: 2,
+          1600: 3,
+          default: 3,
+        },
+      },
+    }
+  },
+  mounted() {
+    this.init()
+  },
+  methods: {
+    init() {
+      this.getHistory()
+    },
+    toArtwork(id) {
+      if (this.isLongpressing) return
+      this.$router.push({
+        name: 'NovelDetail',
+        params: { id },
+      })
+    },
+    async getHistory() {
+      const list = await getCache('novels.history')
+      this.artList = list || []
+    },
+    clearSingleFn(id) {
+      return [
+        () => {
+          this.isLongpressing = true
+          Dialog.confirm({
+            message: this.$t('HBhN6EmgH_x2sduNtKpXn'),
+            cancelButtonText: this.$t('common.cancel'),
+            confirmButtonText: this.$t('common.confirm'),
+          }).then(async () => {
+            this.artList = this.artList.filter(e => e.id != id)
+            await setCache('novels.history', this.artList)
+            this.init()
+          }).catch(() => {})
+        },
+        {
+          modifiers: { stop: true, prevent: true },
+          onMouseUp: () => {
+            setTimeout(() => {
+              this.isLongpressing = false
+            }, 500)
+          },
+        },
+      ]
+    },
+    clearHistory() {
+      Dialog.confirm({
+        message: this.$t('history.confirm.n'),
+        cancelButtonText: this.$t('common.cancel'),
+        confirmButtonText: this.$t('common.confirm'),
+      }).then(async () => {
+        this.artList = []
+        await setCache('novels.history', null)
+      }).catch(() => {})
+    },
+  },
+}
+</script>
+
+<style lang="stylus" scoped>
+.af_title
+  position relative
+  margin-top 40px
+  margin-bottom 40px
+  text-align center
+  font-size 28px
+
+  .clear-ih
+    position absolute
+    top -10px
+    right 20px
+
+    ::v-deep .svg-icon
+      font-size 0.6rem !important
+
+.illusts
+  ::v-deep .top-bar-wrap
+    width 30%
+    padding-top 20px
+    background transparent
+
+  .no-data
+    margin-top 100px
+    font-size 20px
+    text-align center
+
+  .card-box
+    padding: 0 12px
+    display: flex
+    flex-direction: row
+
+    .image-card
+      max-height: 360px
+      margin: 4px 2px
+
+</style>
