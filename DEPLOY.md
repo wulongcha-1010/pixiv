@@ -24,3 +24,5 @@ npx wrangler pages deploy dist --project-name=pixiv --branch=main
 - 接口和图床由浏览器直连（默认 `api.cocomi.eu.org` + `i.pixiv.re`），可用 `.env` 覆盖，见 `.env.example`。
 - `pnpm-workspace.yaml` 承载 pnpm 10+ 的 `patchedDependencies` / `allowBuilds` 配置。
 - `.gitattributes` 固定 LF 并让 `*.patch` 保持原始字节，否则 pnpm 补丁 hash 校验会失败。
+
+<!-- 自动部署链路验证 -->
