@@ -3,3 +3,4 @@
 
 # pnpm 补丁文件必须保持原始字节（换行变化会导致 patch hash 校验失败）
 *.patch -text
+# 部署：Cloudflare Pages 项目 pixiv（构建产物 dist）
